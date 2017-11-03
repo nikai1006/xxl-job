@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * jetty客户端，主要给调度中心使用，用来发送调度任务请求给执行器
  * jetty client
  * @author xuxueli 2015-11-24 22:25:15
  */

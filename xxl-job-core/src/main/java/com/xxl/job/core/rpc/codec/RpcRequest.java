@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.Arrays;
 
 /**
+ * RPC请求封装类
  * request
  * @author xuxueli 2015-10-29 19:39:12
  */

@@ -3,6 +3,7 @@ package com.xxl.job.core.rpc.codec;
 import java.io.Serializable;
 
 /**
+ * 响应数据封装类
  * response
  * @author xuxueli 2015-10-29 19:39:54
  */

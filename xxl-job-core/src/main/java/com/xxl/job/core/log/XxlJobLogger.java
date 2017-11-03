@@ -8,6 +8,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
+ * 日志打印类
  * Created by xuxueli on 17/4/28.
  */
 public class XxlJobLogger {
@@ -43,7 +44,7 @@ public class XxlJobLogger {
         // appendlog
         XxlJobFileAppender.appendLog(logFileName, formatAppendLog);
 
-        logger.warn("[{}]: {}", logFileName, formatAppendLog);
+        logger.debug(">>>>>>>>>>> [{}]: {}", logFileName, formatAppendLog);
     }
 
     /**

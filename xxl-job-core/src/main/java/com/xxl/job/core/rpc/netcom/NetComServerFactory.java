@@ -14,71 +14,112 @@ import java.util.Map;
 
 /**
  * netcom init
+ *
  * @author xuxueli 2015-10-31 22:54:27
  */
-public class NetComServerFactory  {
-	private static final Logger logger = LoggerFactory.getLogger(NetComServerFactory.class);
+public class NetComServerFactory {
 
-	// ---------------------- server start ----------------------
-	JettyServer server = new JettyServer();
-	public void start(int port, String ip, String appName) throws Exception {
-		server.start(port, ip, appName);
-	}
+    private static final Logger logger = LoggerFactory.getLogger(NetComServerFactory.class);
 
-	// ---------------------- server destroy ----------------------
-	public void destroy(){
-		server.destroy();
-	}
+    // ---------------------- server start ----------------------
+    JettyServer server = new JettyServer();
 
-	// ---------------------- server instance ----------------------
-	/**
-	 * init local rpc service map
-	 */
-	private static Map<String, Object> serviceMap = new HashMap<String, Object>();
-	private static String accessToken;
-	public static void putService(Class<?> iface, Object serviceBean){
-		serviceMap.put(iface.getName(), serviceBean);
-	}
-	public static void setAccessToken(String accessToken) {
-		NetComServerFactory.accessToken = accessToken;
-	}
-	public static RpcResponse invokeService(RpcRequest request, Object serviceBean) {
-		if (serviceBean==null) {
-			serviceBean = serviceMap.get(request.getClassName());
-		}
-		if (serviceBean == null) {
-			// TODO
-		}
+    /**
+     * <pre>
+     *
+     * <b>该方法处理两件事情：</b>
+     * <ol>
+     *     <li>启动jetty服务器来监听调度中心的调度请求</li>
+     *     <li>去调度中心进行执行器注册</li>
+     * </ol>
+     * </pre>
+     *
+     * @version 1.0 2017/11/2 16:04
+     * @see com.xxl.job.core.executor.XxlJobExecutor#initExecutorServer(int, String, String, String)
+     */
+    public void start(int port, String ip, String appName) throws Exception {
+        server.start(port, ip, appName);
+    }
 
-		RpcResponse response = new RpcResponse();
+    // ---------------------- server destroy ----------------------
+    public void destroy() {
+        server.destroy();
+    }
 
-		if (System.currentTimeMillis() - request.getCreateMillisTime() > 180000) {
-			response.setResult(new ReturnT<String>(ReturnT.FAIL_CODE, "The timestamp difference between admin and executor exceeds the limit."));
-			return response;
-		}
-		if (accessToken!=null && accessToken.trim().length()>0 && !accessToken.trim().equals(request.getAccessToken())) {
-			response.setResult(new ReturnT<String>(ReturnT.FAIL_CODE, "The access token[" + request.getAccessToken() + "] is wrong."));
-			return response;
-		}
+    // ---------------------- server instance ----------------------
+    /**
+     * init local rpc service map
+     */
+    private static Map<String, Object> serviceMap = new HashMap<String, Object>();
+    private static String accessToken;
 
-		try {
-			Class<?> serviceClass = serviceBean.getClass();
-			String methodName = request.getMethodName();
-			Class<?>[] parameterTypes = request.getParameterTypes();
-			Object[] parameters = request.getParameters();
+    /**
+     * 添加执行器实例
+     *
+     * @param iface
+     * @param serviceBean
+     */
+    public static void putService(Class<?> iface, Object serviceBean) {
+        serviceMap.put(iface.getName(), serviceBean);
+    }
 
-			FastClass serviceFastClass = FastClass.create(serviceClass);
-			FastMethod serviceFastMethod = serviceFastClass.getMethod(methodName, parameterTypes);
+    /**
+     * 设置访问Token
+     *
+     * @param accessToken
+     */
+    public static void setAccessToken(String accessToken) {
+        NetComServerFactory.accessToken = accessToken;
+    }
 
-			Object result = serviceFastMethod.invoke(serviceBean, parameters);
+    /**
+     * 通过请求参数来解析调用相应的执行器实例
+     *
+     * @version 1.0 2017/11/2 9:25
+     * @see com.xxl.job.core.biz.ExecutorBiz
+     */
+    public static RpcResponse invokeService(RpcRequest request, Object serviceBean) {
+        if (serviceBean == null) {
+            String className = request.getClassName();//代理实例名 com.xxl.job.core.biz.ExecutorBiz
 
-			response.setResult(result);
-		} catch (Throwable t) {
-			t.printStackTrace();
-			response.setError(t.getMessage());
-		}
+            serviceBean = serviceMap.get(className);//获取相应的实例
+        }
+        if (serviceBean == null) {
+            // TODO
+        }
 
-		return response;
-	}
+        RpcResponse response = new RpcResponse();
+
+        if (System.currentTimeMillis() - request.getCreateMillisTime() > 180000) {
+            response.setResult(new ReturnT<String>(ReturnT.FAIL_CODE,
+                "The timestamp difference between admin and executor exceeds the limit."));
+            return response;
+        }
+        if (accessToken != null && accessToken.trim().length() > 0 && !accessToken.trim()
+            .equals(request.getAccessToken())) {
+            response.setResult(
+                new ReturnT<String>(ReturnT.FAIL_CODE, "The access token[" + request.getAccessToken() + "] is wrong."));
+            return response;
+        }
+
+        try {
+            Class<?> serviceClass = serviceBean.getClass();
+            String methodName = request.getMethodName();
+            Class<?>[] parameterTypes = request.getParameterTypes();
+            Object[] parameters = request.getParameters();
+
+            FastClass serviceFastClass = FastClass.create(serviceClass);
+            FastMethod serviceFastMethod = serviceFastClass.getMethod(methodName, parameterTypes);
+
+            Object result = serviceFastMethod.invoke(serviceBean, parameters);
+
+            response.setResult(result);
+        } catch (Throwable t) {
+            t.printStackTrace();
+            response.setError(t.getMessage());
+        }
+
+        return response;
+    }
 
 }

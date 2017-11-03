@@ -17,12 +17,18 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 /**
+ * 该类主要给执行器（客户端用），用来处理调度中心的调度请求
  * jetty handler
  * @author xuxueli 2015-11-19 22:32:36
  */
 public class JettyServerHandler extends AbstractHandler {
 	private static Logger logger = LoggerFactory.getLogger(JettyServerHandler.class);
 
+	/**
+	 * 处理调度中心发来的请求
+	 * @version 1.0 2017/11/2 9:07
+	 * @see #doInvoke(HttpServletRequest) 
+	 */
 	@Override
 	public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
 		
@@ -42,6 +48,10 @@ public class JettyServerHandler extends AbstractHandler {
 		
 	}
 
+	/**
+	 * 调度已注册的执行器，具体操作根据请求中的调度器的名字来查询到具体的调度实例，然后通过反射来执行该执行器的excute方法
+	 * @version 1.0 2017/11/2 9:12
+	 */
 	private RpcResponse doInvoke(HttpServletRequest request) {
 		try {
 			// deserialize request
@@ -51,6 +61,7 @@ public class JettyServerHandler extends AbstractHandler {
 				rpcResponse.setError("RpcRequest byte[] is null");
 				return rpcResponse;
 			}
+			//反序列化出任务调度中心的调度请求
 			RpcRequest rpcRequest = (RpcRequest) HessianSerializer.deserialize(requestBytes, RpcRequest.class);
 
 			// invoke

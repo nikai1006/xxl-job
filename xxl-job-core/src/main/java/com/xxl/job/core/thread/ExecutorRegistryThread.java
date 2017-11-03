@@ -28,11 +28,11 @@ public class ExecutorRegistryThread extends Thread {
 
         // valid
         if (appName==null || appName.trim().length()==0) {
-            logger.warn(">>>>>>>>>>>> xxl-job, executor registry config fail, appName is null.");
+            logger.warn(">>>>>>>>>>> xxl-job, executor registry config fail, appName is null.");
             return;
         }
         if (XxlJobExecutor.getAdminBizList() == null) {
-            logger.warn(">>>>>>>>>>>> xxl-job, executor registry config fail, adminAddresses is null.");
+            logger.warn(">>>>>>>>>>> xxl-job, executor registry config fail, adminAddresses is null.");
             return;
         }
 
@@ -52,6 +52,9 @@ public class ExecutorRegistryThread extends Thread {
                 while (!toStop) {
                     try {
                         RegistryParam registryParam = new RegistryParam(RegistryConfig.RegistType.EXECUTOR.name(), appName, executorAddress);
+                        /*
+                        遍历所有的注册服务器，
+                         */
                         for (AdminBiz adminBiz: XxlJobExecutor.getAdminBizList()) {
                             try {
                                 ReturnT<String> registryResult = adminBiz.registry(registryParam);
@@ -72,7 +75,7 @@ public class ExecutorRegistryThread extends Thread {
                     }
 
                     try {
-                        TimeUnit.SECONDS.sleep(RegistryConfig.BEAT_TIMEOUT);
+                        TimeUnit.SECONDS.sleep(RegistryConfig.BEAT_TIMEOUT); //每30秒注册一次
                     } catch (InterruptedException e) {
                         logger.error(e.getMessage(), e);
                     }
@@ -99,7 +102,7 @@ public class ExecutorRegistryThread extends Thread {
                 } catch (Exception e) {
                     logger.error(e.getMessage(), e);
                 }
-                logger.warn(">>>>>>>>>>>> xxl-job, executor registry thread destory.");
+                logger.info(">>>>>>>>>>> xxl-job, executor registry thread destory.");
 
             }
         });

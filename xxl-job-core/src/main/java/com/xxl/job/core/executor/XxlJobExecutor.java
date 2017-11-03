@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Created by xuxueli on 2016/3/2 21:14.
  */
 public class XxlJobExecutor implements ApplicationContextAware {
+
     private static final Logger logger = LoggerFactory.getLogger(XxlJobExecutor.class);
 
     // ---------------------- param ----------------------
@@ -37,18 +38,23 @@ public class XxlJobExecutor implements ApplicationContextAware {
     public void setIp(String ip) {
         this.ip = ip;
     }
+
     public void setPort(int port) {
         this.port = port;
     }
+
     public void setAppName(String appName) {
         this.appName = appName;
     }
+
     public void setAdminAddresses(String adminAddresses) {
         this.adminAddresses = adminAddresses;
     }
+
     public void setAccessToken(String accessToken) {
         this.accessToken = accessToken;
     }
+
     public void setLogPath(String logPath) {
         this.logPath = logPath;
     }
@@ -56,10 +62,12 @@ public class XxlJobExecutor implements ApplicationContextAware {
 
     // ---------------------- applicationContext ----------------------
     private static ApplicationContext applicationContext;
+
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
+
     public static ApplicationContext getApplicationContext() {
         return applicationContext;
     }
@@ -76,17 +84,18 @@ public class XxlJobExecutor implements ApplicationContextAware {
         }
 
         // init logpath
-        if (logPath!=null && logPath.trim().length()>0) {
+        if (logPath != null && logPath.trim().length() > 0) {
             XxlJobFileAppender.logPath = logPath;
         }
 
         // init executor-server
         initExecutorServer(port, ip, appName, accessToken);
     }
-    public void destroy(){
+
+    public void destroy() {
         // destory JobThreadRepository
         if (JobThreadRepository.size() > 0) {
-            for (Map.Entry<Integer, JobThread> item: JobThreadRepository.entrySet()) {
+            for (Map.Entry<Integer, JobThread> item : JobThreadRepository.entrySet()) {
                 removeJobThread(item.getKey(), "Web容器销毁终止");
             }
             JobThreadRepository.clear();
@@ -99,12 +108,14 @@ public class XxlJobExecutor implements ApplicationContextAware {
 
     // ---------------------- admin-client ----------------------
     private static List<AdminBiz> adminBizList;
+
     private static void initAdminBizList(String adminAddresses, String accessToken) throws Exception {
-        if (adminAddresses!=null && adminAddresses.trim().length()>0) {
-            for (String address: adminAddresses.trim().split(",")) {
-                if (address!=null && address.trim().length()>0) {
+        if (adminAddresses != null && adminAddresses.trim().length() > 0) {
+            for (String address : adminAddresses.trim().split(",")) {
+                if (address != null && address.trim().length() > 0) {
                     String addressUrl = address.concat(AdminBiz.MAPPING);
-                    AdminBiz adminBiz = (AdminBiz) new NetComClientProxy(AdminBiz.class, addressUrl, accessToken).getObject();
+                    AdminBiz adminBiz = (AdminBiz) new NetComClientProxy(AdminBiz.class, addressUrl, accessToken)
+                        .getObject();
                     if (adminBizList == null) {
                         adminBizList = new ArrayList<AdminBiz>();
                     }
@@ -113,18 +124,29 @@ public class XxlJobExecutor implements ApplicationContextAware {
             }
         }
     }
-    public static List<AdminBiz> getAdminBizList(){
+
+    public static List<AdminBiz> getAdminBizList() {
         return adminBizList;
     }
 
 
     // ---------------------- executor-server(jetty) ----------------------
     private NetComServerFactory serverFactory = new NetComServerFactory();
+
+    /**
+     * 初始化执行器服务器，主要把注册到bean池中的执行器放到一个map中作缓存,{@link NetComServerFactory#putService(Class, Object)}
+     * <fi>
+     *     <li>注册bean</li>
+     * </fi>
+     * @version 1.0 2017/11/2 9:35
+     * @see NetComServerFactory#putService(Class, Object)
+     */
     private void initExecutorServer(int port, String ip, String appName, String accessToken) throws Exception {
         NetComServerFactory.putService(ExecutorBiz.class, new ExecutorBizImpl());   // rpc-service, base on jetty
-        NetComServerFactory.setAccessToken(accessToken);
+        NetComServerFactory.setAccessToken(accessToken); //设置token
         serverFactory.start(port, ip, appName); // jetty + registry
     }
+
     private void stopExecutorServer() {
         serverFactory.destroy();    // jetty + registry + callback
     }
@@ -132,20 +154,26 @@ public class XxlJobExecutor implements ApplicationContextAware {
 
     // ---------------------- job handler repository ----------------------
     private static ConcurrentHashMap<String, IJobHandler> jobHandlerRepository = new ConcurrentHashMap<String, IJobHandler>();
-    public static IJobHandler registJobHandler(String name, IJobHandler jobHandler){
+
+    public static IJobHandler registJobHandler(String name, IJobHandler jobHandler) {
         logger.info(">>>>>>>>>>> xxl-job register jobhandler success, name:{}, jobHandler:{}", name, jobHandler);
         return jobHandlerRepository.put(name, jobHandler);
     }
-    public static IJobHandler loadJobHandler(String name){
+
+    public static IJobHandler loadJobHandler(String name) {
         return jobHandlerRepository.get(name);
     }
-    private static void initJobHandlerRepository(ApplicationContext applicationContext){
+
+    private static void initJobHandlerRepository(ApplicationContext applicationContext) {
         // init job handler action
+        /*
+        通过spring的applicationContext来获取到被spring扫描到的bean实例，然后再获取使用了JobHander注解的bean实例
+         */
         Map<String, Object> serviceBeanMap = applicationContext.getBeansWithAnnotation(JobHander.class);
 
-        if (serviceBeanMap!=null && serviceBeanMap.size()>0) {
+        if (serviceBeanMap != null && serviceBeanMap.size() > 0) {
             for (Object serviceBean : serviceBeanMap.values()) {
-                if (serviceBean instanceof IJobHandler){
+                if (serviceBean instanceof IJobHandler) {
                     String name = serviceBean.getClass().getAnnotation(JobHander.class).value();
                     IJobHandler handler = (IJobHandler) serviceBean;
                     if (loadJobHandler(name) != null) {
@@ -160,12 +188,14 @@ public class XxlJobExecutor implements ApplicationContextAware {
 
     // ---------------------- job thread repository ----------------------
     private static ConcurrentHashMap<Integer, JobThread> JobThreadRepository = new ConcurrentHashMap<Integer, JobThread>();
-    public static JobThread registJobThread(int jobId, IJobHandler handler, String removeOldReason){
+
+    public static JobThread registJobThread(int jobId, IJobHandler handler, String removeOldReason) {
         JobThread newJobThread = new JobThread(jobId, handler);
         newJobThread.start();
         logger.info(">>>>>>>>>>> xxl-job regist JobThread success, jobId:{}, handler:{}", new Object[]{jobId, handler});
 
-        JobThread oldJobThread = JobThreadRepository.put(jobId, newJobThread);	// putIfAbsent | oh my god, map's put method return the old value!!!
+        JobThread oldJobThread = JobThreadRepository
+            .put(jobId, newJobThread);  // putIfAbsent | oh my god, map's put method return the old value!!!
         if (oldJobThread != null) {
             oldJobThread.toStop(removeOldReason);
             oldJobThread.interrupt();
@@ -173,14 +203,16 @@ public class XxlJobExecutor implements ApplicationContextAware {
 
         return newJobThread;
     }
-    public static void removeJobThread(int jobId, String removeOldReason){
+
+    public static void removeJobThread(int jobId, String removeOldReason) {
         JobThread oldJobThread = JobThreadRepository.remove(jobId);
         if (oldJobThread != null) {
             oldJobThread.toStop(removeOldReason);
             oldJobThread.interrupt();
         }
     }
-    public static JobThread loadJobThread(int jobId){
+
+    public static JobThread loadJobThread(int jobId) {
         JobThread jobThread = JobThreadRepository.get(jobId);
         return jobThread;
     }
