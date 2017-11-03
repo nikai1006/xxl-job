@@ -27,7 +27,7 @@ public class ShardingJobHandler extends IJobHandler {
 		// 业务逻辑
 		for (int i = 0; i < shardingVO.getTotal(); i++) {
 			if (i == shardingVO.getIndex()) {
-				XxlJobLogger.log("第 {0} 片, 命中分片开始处理", i);
+				XxlJobLogger.log("第 {0} 片, 命令中分片开始处理", i);
 			} else {
 				XxlJobLogger.log("第 {0} 片, 忽略", i);
 			}
